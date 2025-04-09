@@ -8,7 +8,7 @@ import {
   Status,
   ClientToolsConfig,
   InputConfig,
-} from "@apeyron-voice/client";
+} from "@apeyron-engineering/voice-client";
 
 export type {
   Role,
@@ -17,7 +17,7 @@ export type {
   SessionConfig,
   DisconnectionDetails,
   Language,
-} from "@apeyron-voice/client";
+} from "@apeyron-engineering/voice-client";
 
 export type HookOptions = Partial<
   SessionConfig & HookCallbacks & ClientToolsConfig & InputConfig

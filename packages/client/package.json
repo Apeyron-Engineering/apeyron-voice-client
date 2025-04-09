@@ -1,5 +1,5 @@
 {
-  "name": "@apeyron-voice/client",
+  "name": "@apeyron-engineering/voice-client",
   "version": "0.1.2",
   "description": "Apeyron Voice JavaScript Client Library",
   "main": "./dist/lib.umd.js",
@@ -8,6 +8,9 @@
   "type": "module",
   "unpkg": "./dist/lib.umd.js",
   "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -27,7 +30,7 @@
     "test": "vitest"
   },
   "keywords": [],
-  "author": "ElevenLabs",
+  "author": "Apeyron Engineers",
   "license": "MIT",
   "devDependencies": {
     "@types/node-wav": "^0.0.3",
@@ -42,7 +45,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/elevenlabs/packages.git",
+    "url": "https://github.com/Apeyron-Engineering/apeyron-voice-client.git",
     "directory": "packages/client"
   }
 }
