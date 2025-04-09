@@ -57,7 +57,7 @@ importers:
   packages/react:
     dependencies:
       '@apeyron-engineering/voice-client':
-        specifier: workspace:*
+        specifier: latest
         version: link:../client
       react:
         specifier: '>=16.8.0'
