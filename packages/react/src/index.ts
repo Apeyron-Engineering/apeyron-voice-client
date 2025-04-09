@@ -8,7 +8,7 @@ import {
   Status,
   ClientToolsConfig,
   InputConfig,
-} from "@11labs/client";
+} from "@apeyron-voice/client";
 
 export type {
   Role,
@@ -17,8 +17,7 @@ export type {
   SessionConfig,
   DisconnectionDetails,
   Language,
-} from "@11labs/client";
-export { postOverallFeedback } from "@11labs/client";
+} from "@apeyron-voice/client";
 
 export type HookOptions = Partial<
   SessionConfig & HookCallbacks & ClientToolsConfig & InputConfig
@@ -45,7 +44,6 @@ export function useConversation<T extends HookOptions & ControlledState>(
   const conversationRef = useRef<Conversation | null>(null);
   const lockRef = useRef<Promise<Conversation> | null>(null);
   const [status, setStatus] = useState<Status>("disconnected");
-  const [canSendFeedback, setCanSendFeedback] = useState(false);
   const [mode, setMode] = useState<Mode>("listening");
 
   useEffect(() => {
@@ -87,9 +85,6 @@ export function useConversation<T extends HookOptions & ControlledState>(
           onStatusChange: ({ status }) => {
             setStatus(status);
           },
-          onCanSendFeedbackChange: ({ canSendFeedback }) => {
-            setCanSendFeedback(canSendFeedback);
-          },
         } as Options);
 
         conversationRef.current = await lockRef.current;
@@ -108,6 +103,7 @@ export function useConversation<T extends HookOptions & ControlledState>(
     }) as T extends SessionConfig
       ? (options?: HookOptions) => Promise<string>
       : (options: SessionConfig & HookOptions) => Promise<string>,
+
     endSession: async () => {
       const conversation = conversationRef.current;
       conversationRef.current = null;
@@ -128,9 +124,6 @@ export function useConversation<T extends HookOptions & ControlledState>(
     getOutputVolume: () => {
       return conversationRef.current?.getOutputVolume() ?? 0;
     },
-    sendFeedback: (like: boolean) => {
-      conversationRef.current?.sendFeedback(like);
-    },
     getId: () => {
       return conversationRef.current?.getId();
     },
@@ -138,10 +131,7 @@ export function useConversation<T extends HookOptions & ControlledState>(
       conversationRef.current?.sendContextualUpdate(text);
     },
     status,
-    canSendFeedback,
     micMuted,
     isSpeaking: mode === "speaking",
   };
 }
-
-// const con = useConversation({agentId: ""})

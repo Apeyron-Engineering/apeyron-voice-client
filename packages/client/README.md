@@ -112,7 +112,6 @@ The options passed to `startSession` can also be used to register optional callb
 - **onError** - handler called when an error is encountered.
 - **onStatusChange** - handler called whenever connection status changes. Can be `connected`, `connecting` and `disconnected` (initial).
 - **onModeChange** - handler called when a status changes, eg. agent switches from `speaking` to `listening`, or the other way around.
-- **onCanSendFeedbackChange** - handler called when sending feedback becomes available or unavailable.
 
 #### Client Tools
 
@@ -209,13 +208,6 @@ Afterwards the conversation instance will be unusable and can be safely discarde
 ```js
 await conversation.endSession();
 ```
-
-##### sendFeedback
-
-A method for sending binary feedback to the agent.
-The method accepts a boolean value, where `true` represents positive feedback and `false` negative feedback.
-Feedback is always correlated to the most recent agent response and can be sent only once per response.
-You can listen to `onCanSendFeedbackChange` to know if feedback can be sent at the given moment.
 
 ```js
 conversation.sendFeedback(true);

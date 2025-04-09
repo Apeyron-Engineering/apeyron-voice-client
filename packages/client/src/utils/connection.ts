@@ -6,8 +6,6 @@ import {
   IncomingSocketEvent,
 } from "./events";
 
-const MAIN_PROTOCOL = "convai";
-
 export type Language =
   | "en"
   | "ja"
@@ -40,8 +38,8 @@ export type Language =
   | "no"
   | "vi";
 export type SessionConfig = {
-  origin?: string;
-  authorization?: string;
+  apiUrl: string;
+  // authorization?: string;
   overrides?: {
     agent?: {
       prompt?: {
@@ -62,10 +60,7 @@ export type SessionConfig = {
     android?: number;
     ios?: number;
   };
-} & (
-  | { signedUrl: string; agentId?: undefined }
-  | { agentId: string; signedUrl?: undefined }
-);
+} 
 export type FormatConfig = {
   format: "pcm" | "ulaw";
   sampleRate: number;
@@ -86,24 +81,15 @@ export type DisconnectionDetails =
 export type OnDisconnectCallback = (details: DisconnectionDetails) => void;
 export type OnMessageCallback = (event: IncomingSocketEvent) => void;
 
-const WSS_API_ORIGIN = "wss://api.elevenlabs.io";
-const WSS_API_PATHNAME = "/v1/convai/conversation?agent_id=";
-
 export class Connection {
   public static async create(config: SessionConfig): Promise<Connection> {
     let socket: WebSocket | null = null;
 
     try {
-      const origin = config.origin ?? WSS_API_ORIGIN;
-      const url = config.signedUrl
-        ? config.signedUrl
-        : origin + WSS_API_PATHNAME + config.agentId;
+      const url = config.apiUrl;
 
-      const protocols = [MAIN_PROTOCOL];
-      if (config.authorization) {
-        protocols.push(`bearer.${config.authorization}`);
-      }
-      socket = new WebSocket(url, protocols);
+
+      socket = new WebSocket(url);
       const conversationConfig = await new Promise<
         ConfigEvent["conversation_initiation_metadata_event"]
       >((resolve, reject) => {
@@ -270,7 +256,7 @@ export class Connection {
 
 function parseFormat(format: string): FormatConfig {
   const [formatPart, sampleRatePart] = format.split("_");
-  if (!["pcm", "ulaw"].includes(formatPart)) {
+  if (!["pcm", "ulaw"].some(format => format === formatPart)) {
     throw new Error(`Invalid format: ${format}`);
   }
 
