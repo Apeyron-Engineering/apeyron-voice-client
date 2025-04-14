@@ -1,10 +1,17 @@
 import {
   InitiationClientDataEvent,
   ConfigEvent,
-  isValidSocketEvent,
   OutgoingSocketEvent,
   IncomingSocketEvent,
+  UserTranscriptionData,
+  AgentResponseData,
+  AgentAudioData,
+  InterruptionData,
+  InternalTentativeAgentResponseData,
+  PingData,
+  ClientToolCallData
 } from "./events";
+import { io, Socket } from "socket.io-client";
 
 export type Language =
   | "en"
@@ -37,6 +44,7 @@ export type Language =
   | "hu"
   | "no"
   | "vi";
+
 export type SessionConfig = {
   apiUrl: string;
   // authorization?: string;
@@ -60,113 +68,81 @@ export type SessionConfig = {
     android?: number;
     ios?: number;
   };
-} 
+};
+
 export type FormatConfig = {
   format: "pcm" | "ulaw";
   sampleRate: number;
 };
+
 export type DisconnectionDetails =
   | {
-      reason: "error";
-      message: string;
-      context: Event;
-    }
+    reason: "error";
+    message: string;
+    context: Event | any;
+  }
   | {
-      reason: "agent";
-      context: CloseEvent;
-    }
+    reason: "agent";
+    context: CloseEvent | any;
+  }
   | {
-      reason: "user";
-    };
+    reason: "user";
+  };
+
 export type OnDisconnectCallback = (details: DisconnectionDetails) => void;
 export type OnMessageCallback = (event: IncomingSocketEvent) => void;
 
 export class Connection {
   public static async create(config: SessionConfig): Promise<Connection> {
-    let socket: WebSocket | null = null;
+    const socket: Socket = io(config.apiUrl, { transports: ["websocket"] });
 
-    try {
-      const url = config.apiUrl;
+    return new Promise<Connection>((resolve, reject) => {
+      socket.on("connect", () => {
 
 
-      socket = new WebSocket(url);
-      const conversationConfig = await new Promise<
-        ConfigEvent["conversation_initiation_metadata_event"]
-      >((resolve, reject) => {
-        socket!.addEventListener(
-          "open",
-          () => {
-            const overridesEvent: InitiationClientDataEvent = {
-              type: "conversation_initiation_client_data",
-            };
-
-            if (config.overrides) {
-              overridesEvent.conversation_config_override = {
-                agent: {
-                  prompt: config.overrides.agent?.prompt,
-                  first_message: config.overrides.agent?.firstMessage,
-                  language: config.overrides.agent?.language,
-                },
-                tts: {
-                  voice_id: config.overrides.tts?.voiceId,
-                },
-              };
-            }
-
-            if (config.customLlmExtraBody) {
-              overridesEvent.custom_llm_extra_body = config.customLlmExtraBody;
-            }
-
-            if (config.dynamicVariables) {
-              overridesEvent.dynamic_variables = config.dynamicVariables;
-            }
-
-            socket?.send(JSON.stringify(overridesEvent));
-          },
-          { once: true }
-        );
-        socket!.addEventListener("error", event => {
-          // In case the error event is followed by a close event, we want the
-          // latter to be the one that rejects the promise as it contains more
-          // useful information.
-          setTimeout(() => reject(event), 0);
-        });
-        socket!.addEventListener("close", reject);
-        socket!.addEventListener(
-          "message",
-          (event: MessageEvent) => {
-            const message = JSON.parse(event.data);
-
-            if (!isValidSocketEvent(message)) {
-              return;
-            }
-
-            if (message.type === "conversation_initiation_metadata") {
-              resolve(message.conversation_initiation_metadata_event);
-            } else {
-              console.warn(
-                "First received message is not conversation metadata."
-              );
-            }
-          },
-          { once: true }
-        );
+        socket.emit("conversation_initiation_client_data");
       });
 
-      const {
-        conversation_id,
-        agent_output_audio_format,
-        user_input_audio_format,
-      } = conversationConfig;
+      socket.on("connect_error", (err: any) => {
+        setTimeout(() => reject(err), 0);
+      });
 
-      const inputFormat = parseFormat(user_input_audio_format ?? "pcm_16000");
-      const outputFormat = parseFormat(agent_output_audio_format);
+      socket.on("disconnect", (reason: string) => {
+        reject(new Error(`Socket disconnected: ${reason}`));
+      });
 
-      return new Connection(socket, conversation_id, inputFormat, outputFormat);
-    } catch (error) {
-      socket?.close();
-      throw error;
-    }
+      socket.once("conversation_initiation_metadata", (data: any) => {
+
+        console.log(data)
+
+        // if (!isValidSocketEvent(data)) {
+        //   reject(new Error("Invalid socket event received"));
+        //   return;
+        // }
+
+        // if (data.type === "conversation_initiation_metadata") {
+        const conversationConfig = data.conversation_initiation_metadata_event as ConfigEvent["conversation_initiation_metadata_event"];
+        const {
+          conversation_id,
+          agent_output_audio_format,
+          user_input_audio_format,
+        } = conversationConfig;
+
+        const inputFormat = parseFormat(
+          user_input_audio_format ?? "pcm_16000"
+        );
+        const outputFormat = parseFormat(agent_output_audio_format);
+
+        resolve(
+          new Connection(socket, conversation_id, inputFormat, outputFormat)
+        );
+      }
+
+      );
+    }).catch((err) => {
+      socket.disconnect();
+      throw err;
+    });
   }
 
   private queue: IncomingSocketEvent[] = [];
@@ -175,62 +151,107 @@ export class Connection {
   private onMessageCallback: OnMessageCallback | null = null;
 
   private constructor(
-    public readonly socket: WebSocket,
+    public readonly socket: Socket,
     public readonly conversationId: string,
     public readonly inputFormat: FormatConfig,
     public readonly outputFormat: FormatConfig
   ) {
-    this.socket.addEventListener("error", event => {
-      // In case the error event is followed by a close event, we want the
-      // latter to be the one that disconnects the session as it contains more
-      // useful information.
-      setTimeout(
-        () =>
-          this.disconnect({
-            reason: "error",
-            message: "The connection was closed due to a socket error.",
-            context: event,
-          }),
-        0
-      );
+    this.socket.on("error", (error: any) => {
+      setTimeout(() => {
+        this.disconnect({
+          reason: "error",
+          message:
+            "La connessione è stata chiusa a causa di un errore di socket.",
+          context: error,
+        });
+      }, 0);
     });
-    this.socket.addEventListener("close", event => {
-      this.disconnect(
-        event.code === 1000
-          ? {
-              reason: "agent",
-              context: event,
-            }
-          : {
-              reason: "error",
-              message:
-                event.reason || "The connection was closed by the server.",
-              context: event,
-            }
-      );
+
+    this.socket.on("disconnect", (reason: string) => {
+      const event = {
+        code: 1000,
+        reason,
+        wasClean: true,
+      } as CloseEvent;
+      if (reason === "io client disconnect") {
+        this.disconnect({ reason: "user" });
+      } else {
+        this.disconnect({
+          reason: "agent",
+          context: event,
+        });
+      }
     });
-    this.socket.addEventListener("message", event => {
+
+    this.socket.on("message", (data: any) => {
       try {
-        const parsedEvent = JSON.parse(event.data);
-        if (!isValidSocketEvent(parsedEvent)) {
-          return;
-        }
+        // if (!isValidSocketEvent(data)) {
+        //   return;
+        // }
 
         if (this.onMessageCallback) {
-          this.onMessageCallback(parsedEvent);
+          this.onMessageCallback(data);
         } else {
-          this.queue.push(parsedEvent);
+          this.queue.push(data);
         }
-      } catch (_) {}
+      } catch (_) { }
     });
+
+    this.socket.on("agent_response", (data: AgentResponseData) => this.handleIncoming({
+      type: "agent_response",
+      agent_response_event: data,
+    }));
+
+    this.socket.on("user_transcript", (data: UserTranscriptionData) => this.handleIncoming({
+      type: "user_transcript",
+      user_transcription_event: data,
+    }));
+
+    this.socket.on("audio", (data: AgentAudioData) => this.handleIncoming({
+      type: "audio",
+      audio_event: data
+    }));
+
+    this.socket.on("interruption", (data: InterruptionData) => this.handleIncoming({
+      type: "interruption",
+      interruption_event: data,
+    }));
+
+    this.socket.on("internal_tentative_agent_response", (data: InternalTentativeAgentResponseData) => this.handleIncoming({
+      type: "internal_tentative_agent_response",
+      tentative_agent_response_internal_event: data,
+    }));
+
+    this.socket.on("ping", (data: PingData) => this.handleIncoming({
+      type: "ping",
+      ping_event: data,
+    }));
+
+    this.socket.on("client_tool_call", (data: ClientToolCallData) => this.handleIncoming({
+      type: "client_tool_call",
+      client_tool_call: data,
+    }));
+
+
+
+  }
+
+  private handleIncoming(event: IncomingSocketEvent) {
+    if (this.onMessageCallback) {
+      this.onMessageCallback(event);
+    } else {
+      this.queue.push(event);
+    }
   }
 
   public close() {
-    this.socket.close();
+    this.socket.disconnect();
   }
 
   public sendMessage(message: OutgoingSocketEvent) {
-    this.socket.send(JSON.stringify(message));
+    const { type, ...data } = message
+    console.log(type, data)
+    this.socket.emit(type, data);
   }
 
   public onMessage(callback: OnMessageCallback) {
@@ -256,13 +277,13 @@ export class Connection {
 
 function parseFormat(format: string): FormatConfig {
   const [formatPart, sampleRatePart] = format.split("_");
-  if (!["pcm", "ulaw"].some(format => format === formatPart)) {
-    throw new Error(`Invalid format: ${format}`);
+  if (!["pcm", "ulaw"].includes(formatPart)) {
+    throw new Error(`Formato non valido: ${format}`);
   }
 
   const sampleRate = parseInt(sampleRatePart);
   if (isNaN(sampleRate)) {
-    throw new Error(`Invalid sample rate: ${sampleRatePart}`);
+    throw new Error(`Frequenza di campionamento non valida: ${sampleRatePart}`);
   }
 
   return {

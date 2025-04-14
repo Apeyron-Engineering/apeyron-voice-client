@@ -30,6 +30,7 @@
   "keywords": [],
   "license": "MIT",
   "dependencies": {
+    "socket.io-client": "^4.8.1",
     "tsup": "^8.4.0",
     "typescript": "^5.8.2"
   },

@@ -112,7 +112,7 @@ export class Conversation {
       }
 
       if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
       connection = await Connection.create(options);
@@ -124,13 +124,13 @@ export class Conversation {
         Output.create(connection.outputFormat),
       ]);
 
-      preliminaryInputStream?.getTracks().forEach(track => track.stop());
+      preliminaryInputStream?.getTracks().forEach((track) => track.stop());
       preliminaryInputStream = null;
 
       return new Conversation(fullOptions, connection, input, output, wakeLock);
     } catch (error) {
       fullOptions.onStatusChange({ status: "disconnected" });
-      preliminaryInputStream?.getTracks().forEach(track => track.stop());
+      preliminaryInputStream?.getTracks().forEach((track) => track.stop());
       connection?.close();
       await input?.close();
       await output?.close();
@@ -338,16 +338,21 @@ export class Conversation {
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
     if (maxVolume > 0.001) {
+      console.log("VOCE ALTA!!");
+
       if (this.status === "connected") {
         this.connection.sendMessage({
           user_audio_chunk: arrayBufferToBase64(rawAudioPcmData.buffer),
           type: "user_audio_chunk",
         });
       }
+    } else {
+      console.log("VOCE BASSA!!");
     }
   };
 
   private onOutputWorkletMessage = ({ data }: MessageEvent): void => {
+    console.log("OUTPUT WORKLET MSG", data);
     if (data.type === "process") {
       this.updateMode(data.finished ? "listening" : "speaking");
     }

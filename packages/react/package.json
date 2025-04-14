@@ -31,7 +31,7 @@
     "require": "./dist/index.cjs"
   },
   "dependencies": {
-    "@apeyron-engineering/voice-client": "latest",
+    "@apeyron-engineering/voice-client": "link:@apeyron-engineering/voice-client",
     "tsup": "^8.4.0",
     "typescript": "^5.8.2"
   },

@@ -1,55 +1,88 @@
 import { Language } from "./connection";
 
+export type UserTranscriptionData = {
+  user_transcript: string;
+}
+
 export type UserTranscriptionEvent = {
   type: "user_transcript";
-  user_transcription_event: { user_transcript: string };
+  user_transcription_event: UserTranscriptionData;
 };
+
+
+export type AgentResponseData = {
+  agent_response: string;
+}
+
 export type AgentResponseEvent = {
   type: "agent_response";
-  agent_response_event: { agent_response: string };
+  agent_response_event: AgentResponseData;
 };
+
+
+export type AgentAudioData = {
+  audio_base_64: string;
+  event_id: number;
+}
+
 export type AgentAudioEvent = {
   type: "audio";
-  audio_event: {
-    audio_base_64: string;
-    event_id: number;
-  };
+  audio_event: AgentAudioData;
 };
+
+
+export type InterruptionData = {
+  event_id: number;
+}
+
 export type InterruptionEvent = {
   type: "interruption";
-  interruption_event: {
-    event_id: number;
-  };
+  interruption_event: InterruptionData
 };
+
+
+export type InternalTentativeAgentResponseData = {
+  tentative_agent_response: string;
+}
+
 export type InternalTentativeAgentResponseEvent = {
   type: "internal_tentative_agent_response";
-  tentative_agent_response_internal_event: {
-    tentative_agent_response: string;
-  };
+  tentative_agent_response_internal_event: InternalTentativeAgentResponseData
 };
+
+export type ConfigData = {
+  conversation_id: string;
+  agent_output_audio_format: string;
+  user_input_audio_format?: string;
+}
+
+
 export type ConfigEvent = {
   type: "conversation_initiation_metadata";
-  conversation_initiation_metadata_event: {
-    conversation_id: string;
-    agent_output_audio_format: string;
-    user_input_audio_format?: string;
-  };
+  conversation_initiation_metadata_event: ConfigData
 };
+
+
+export type PingData = {
+  event_id: number;
+  ping_ms?: number;
+}
+
 export type PingEvent = {
   type: "ping";
-  ping_event: {
-    event_id: number;
-    ping_ms?: number;
-  };
+  ping_event: PingData
 };
+
+export type ClientToolCallData = {
+  tool_name: string;
+  tool_call_id: string;
+  parameters: any;
+  expects_response: boolean;
+}
+
 export type ClientToolCallEvent = {
   type: "client_tool_call";
-  client_tool_call: {
-    tool_name: string;
-    tool_call_id: string;
-    parameters: any;
-    expects_response: boolean;
-  };
+  client_tool_call: ClientToolCallData
 };
 
 // TODO correction missing
@@ -63,11 +96,13 @@ export type IncomingSocketEvent =
   | PingEvent
   | ClientToolCallEvent;
 
+
 export type PongEvent = {
   type: "pong";
   event_id: number;
 };
 export type UserAudioEvent = {
+  type: "user_audio";
   user_audio_chunk: string;
 };
 export type ClientToolResultEvent = {
@@ -110,7 +145,3 @@ export type OutgoingSocketEvent =
   | ClientToolResultEvent
   | ContextualUpdateEvent
   | UserAudioChunkEvent;
-
-export function isValidSocketEvent(event: any): event is IncomingSocketEvent {
-  return !!event.type;
-}
