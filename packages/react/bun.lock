@@ -4,7 +4,7 @@
     "": {
       "name": "@apeyron-engineering/react-voice-client",
       "dependencies": {
-        "@apeyron-engineering/voice-client": "latest",
+        "@apeyron-engineering/voice-client": "^1.2.0",
         "tsup": "^8.4.0",
         "typescript": "^5.8.2",
       },
@@ -19,7 +19,7 @@
     },
   },
   "packages": {
-    "@apeyron-engineering/voice-client": ["@apeyron-engineering/voice-client@1.1.0", "https://npm.pkg.github.com/download/@apeyron-engineering/voice-client/1.1.0/bcb62b4777fa757b108f592c3058e8b2565f3070", { "dependencies": { "socket.io-client": "^4.8.1", "tsup": "^8.4.0", "typescript": "^5.8.2" } }, "sha512-7VkxfpHRzzJsDv/T9ERZHRj/TU5J4XI9jz126xOs9ETDGKrWSjbnG+nOFf2bFGsQ7Hhjyp3AZabV9c2L2yqMBg=="],
+    "@apeyron-engineering/voice-client": ["@apeyron-engineering/voice-client@1.2.0", "https://npm.pkg.github.com/download/@apeyron-engineering/voice-client/1.2.0/cae8269065b3479f9edc7d20939c232e45719948", { "dependencies": { "socket.io-client": "^4.8.1", "tsup": "^8.4.0", "typescript": "^5.8.2" } }, "sha512-+zeIVlVSrTeggBHZ3z9aXJHJgNftHZ0mClsrUYq/ORdlv9zZjXEpAQkcTuH4FxNMtwVOp/Srp1HdMP85lKuXnQ=="],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.25.2", "", { "os": "aix", "cpu": "ppc64" }, "sha512-wCIboOL2yXZym2cgm6mlA742s9QeJ8DjGVaL39dLN4rRwrOgOyYSnOaFPhKZGLb2ngj4EyfAFjsNJwPXZvseag=="],
 
