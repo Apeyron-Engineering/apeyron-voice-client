@@ -105,14 +105,7 @@ export class Connection {
     return new Promise<Connection>((resolve, reject) => {
       socket.on("connect", () => {
         console.log("connect");
-        resolve(
-          new Connection(
-            socket,
-            "",
-            { format: "pcm", sampleRate: 16000 },
-            { format: "pcm", sampleRate: 16000 }
-          )
-        );
+
       });
 
       socket.on("connect_error", (err: any) => {
@@ -124,8 +117,22 @@ export class Connection {
       });
 
       socket.once("conversation_initiation_metadata", (data: any) => {
-        console.log(data);
-      });
+        const conversationConfig = data.conversation_initiation_metadata_event as ConfigEvent["conversation_initiation_metadata_event"];
+        const {
+          conversation_id,
+          agent_output_audio_format,
+          user_input_audio_format,
+        } = conversationConfig;
+
+        const inputFormat = parseFormat(
+          user_input_audio_format ?? "pcm_16000"
+        );
+        const outputFormat = parseFormat(agent_output_audio_format);
+
+        resolve(
+          new Connection(socket, conversation_id, inputFormat, outputFormat)
+        );
+      })
     }).catch((err) => {
       socket.disconnect();
       throw err;
