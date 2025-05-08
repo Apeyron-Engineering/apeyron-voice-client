@@ -65,6 +65,8 @@ export function useConversation<T extends HookOptions & ControlledState>(
   }, []);
 
   return {
+  
+
     startSession: (async (options?: HookOptions) => {
       if (conversationRef.current?.isOpen()) {
         return conversationRef.current.getId();
@@ -88,14 +90,7 @@ export function useConversation<T extends HookOptions & ControlledState>(
         } as Options);
 
         conversationRef.current = await lockRef.current;
-        // Persist controlled state between sessions
-        if (micMuted !== undefined) {
-          conversationRef.current.setMicMuted(micMuted);
-        }
-        if (volume !== undefined) {
-          conversationRef.current.setVolume({ volume });
-        }
-
+        console.log("Sessione creata", conversationRef.current);
         return conversationRef.current.getId();
       } finally {
         lockRef.current = null;
@@ -109,6 +104,12 @@ export function useConversation<T extends HookOptions & ControlledState>(
       conversationRef.current = null;
       await conversation?.endSession();
     },
+    initializeAudioIOAndEmit: async () => {
+      await conversationRef.current?.initializeAudioIOAndEmit();
+    },
+    disconnectAudioIO: async () => {
+      await conversationRef.current?.disconnectAudioIO();
+    },
     setVolume: ({ volume }: { volume: number }) => {
       conversationRef.current?.setVolume({ volume });
     },
@@ -120,6 +121,9 @@ export function useConversation<T extends HookOptions & ControlledState>(
     },
     getInputVolume: () => {
       return conversationRef.current?.getInputVolume() ?? 0;
+    },
+    sendChatMessage: (message: string) => {
+      conversationRef.current?.sendChatMessage(message);
     },
     getOutputVolume: () => {
       return conversationRef.current?.getOutputVolume() ?? 0;

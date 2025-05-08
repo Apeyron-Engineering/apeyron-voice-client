@@ -9,7 +9,9 @@ import {
   InterruptionData,
   InternalTentativeAgentResponseData,
   PingData,
-  ClientToolCallData
+  ClientToolCallData,
+  ChatData,
+  TokenData
 } from "./events";
 import { io, Socket } from "socket.io-client";
 
@@ -47,7 +49,7 @@ export type Language =
 
 export type SessionConfig = {
   apiUrl: string;
-  // authorization?: string;
+  authorization?: string;
   overrides?: {
     agent?: {
       prompt?: {
@@ -94,13 +96,23 @@ export type OnMessageCallback = (event: IncomingSocketEvent) => void;
 
 export class Connection {
   public static async create(config: SessionConfig): Promise<Connection> {
-    const socket: Socket = io(config.apiUrl, { transports: ["websocket"] });
+    const socket: Socket = io(config.apiUrl, {
+      transports: ["websocket"], auth: {
+        token: config.authorization
+      }
+    });
 
     return new Promise<Connection>((resolve, reject) => {
       socket.on("connect", () => {
-
-
-        socket.emit("conversation_initiation_client_data");
+        console.log("connect");
+        resolve(
+          new Connection(
+            socket,
+            "",
+            { format: "pcm", sampleRate: 16000 },
+            { format: "pcm", sampleRate: 16000 }
+          )
+        );
       });
 
       socket.on("connect_error", (err: any) => {
@@ -112,33 +124,8 @@ export class Connection {
       });
 
       socket.once("conversation_initiation_metadata", (data: any) => {
-
-        console.log(data)
-
-        // if (!isValidSocketEvent(data)) {
-        //   reject(new Error("Invalid socket event received"));
-        //   return;
-        // }
-
-        // if (data.type === "conversation_initiation_metadata") {
-        const conversationConfig = data.conversation_initiation_metadata_event as ConfigEvent["conversation_initiation_metadata_event"];
-        const {
-          conversation_id,
-          agent_output_audio_format,
-          user_input_audio_format,
-        } = conversationConfig;
-
-        const inputFormat = parseFormat(
-          user_input_audio_format ?? "pcm_16000"
-        );
-        const outputFormat = parseFormat(agent_output_audio_format);
-
-        resolve(
-          new Connection(socket, conversation_id, inputFormat, outputFormat)
-        );
-      }
-
-      );
+        console.log(data);
+      });
     }).catch((err) => {
       socket.disconnect();
       throw err;
@@ -200,6 +187,16 @@ export class Connection {
     this.socket.on("agent_response", (data: AgentResponseData) => this.handleIncoming({
       type: "agent_response",
       agent_response_event: data,
+    }));
+
+    this.socket.on("chat", (data: ChatData) => this.handleIncoming({
+      type: "chat",
+      chat_event: data,
+    }));
+
+    this.socket.on("token", (data: TokenData) => this.handleIncoming({
+      type: "token",
+      token_event: data,
     }));
 
     this.socket.on("user_transcript", (data: UserTranscriptionData) => this.handleIncoming({
@@ -277,7 +274,7 @@ export class Connection {
 
 function parseFormat(format: string): FormatConfig {
   const [formatPart, sampleRatePart] = format.split("_");
-  if (!["pcm", "ulaw"].includes(formatPart)) {
+  if (formatPart !== "pcm" && formatPart !== "ulaw") {
     throw new Error(`Formato non valido: ${format}`);
   }
 

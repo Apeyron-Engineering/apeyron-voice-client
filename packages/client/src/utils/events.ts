@@ -14,6 +14,23 @@ export type AgentResponseData = {
   agent_response: string;
 }
 
+export type ChatData = {
+  text: string;
+}
+
+export type ChatEvent = {
+  type: "chat";
+  chat_event: ChatData;
+};
+
+export type TokenData = {
+  token: string;
+}
+
+export type TokenEvent = {
+  type: "token";
+  token_event: TokenData;
+};
 export type AgentResponseEvent = {
   type: "agent_response";
   agent_response_event: AgentResponseData;
@@ -94,7 +111,9 @@ export type IncomingSocketEvent =
   | InternalTentativeAgentResponseEvent
   | ConfigEvent
   | PingEvent
-  | ClientToolCallEvent;
+  | ClientToolCallEvent
+  | ChatEvent
+  | TokenEvent;
 
 
 export type PongEvent = {
@@ -110,6 +129,10 @@ export type ClientToolResultEvent = {
   tool_call_id: string;
   result: any;
   is_error: boolean;
+};
+export type ChatMessageEvent = {
+  type: "chat";
+  text: string;
 };
 export type InitiationClientDataEvent = {
   type: "conversation_initiation_client_data";
@@ -144,4 +167,5 @@ export type OutgoingSocketEvent =
   | InitiationClientDataEvent
   | ClientToolResultEvent
   | ContextualUpdateEvent
-  | UserAudioChunkEvent;
+  | UserAudioChunkEvent
+  | ChatMessageEvent;
