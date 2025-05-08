@@ -474,7 +474,7 @@ export class Conversation {
   public sendChatMessage = (message: string) => {
     this.connection.sendMessage({
       type: "chat",
-      text: message
+      text: message,
     });
   }
   public getInputByteFrequencyData = () => {
@@ -514,22 +514,27 @@ export class Conversation {
 
 
   public async initializeAudioIOAndEmit() {
-    if (!this.input || !this.output) {
-      [this.input, this.output] = await Promise.all([
-        Input.create({
-          ...this.connection.inputFormat,
-          preferHeadphonesForIosDevices: this.options.preferHeadphonesForIosDevices,
-        }),
-        Output.create(this.connection.outputFormat),
-      ]);
-      if (this.input) this.input.worklet.port.onmessage = this.onInputWorkletMessage;
-      if (this.output) this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
-    }
 
+    this.connection.socket.emit("voice_conversation_client_data");
+
+
+    this.connection.onFormats(async ({ inputFormat, outputFormat }) => {
+
+
+      if (!this.input || !this.output) {
+        [this.input, this.output] = await Promise.all([
+          Input.create({ ...inputFormat, preferHeadphonesForIosDevices: this.options.preferHeadphonesForIosDevices }),
+          Output.create(outputFormat),
+        ]);
+
+        this.input.worklet.port.onmessage = this.onInputWorkletMessage;
+        this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
+
+      }
+    });
     this.updateStatus("audio_connected");
 
 
-    this.connection.socket.emit("conversation_initiation_client_data");
   }
 
   public async disconnectAudioIO() {

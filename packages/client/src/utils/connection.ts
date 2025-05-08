@@ -93,7 +93,7 @@ export type DisconnectionDetails =
 
 export type OnDisconnectCallback = (details: DisconnectionDetails) => void;
 export type OnMessageCallback = (event: IncomingSocketEvent) => void;
-
+export type OnFormatsCallback = (formats: { inputFormat: FormatConfig, outputFormat: FormatConfig }) => void;
 export class Connection {
   public static async create(config: SessionConfig): Promise<Connection> {
     const socket: Socket = io(config.apiUrl, {
@@ -104,7 +104,8 @@ export class Connection {
 
     return new Promise<Connection>((resolve, reject) => {
       socket.on("connect", () => {
-        socket.emit("conversation_initiation_client_data");
+        console.log("connect");
+        resolve(new Connection(socket, socket.id ?? ""));
       });
 
       socket.on("connect_error", (err: any) => {
@@ -115,23 +116,7 @@ export class Connection {
         reject(new Error(`Socket disconnected: ${reason}`));
       });
 
-      socket.once("conversation_initiation_metadata", (data: any) => {
-        const conversationConfig = data.conversation_initiation_metadata_event as ConfigEvent["conversation_initiation_metadata_event"];
-        const {
-          conversation_id,
-          agent_output_audio_format,
-          user_input_audio_format,
-        } = conversationConfig;
 
-        const inputFormat = parseFormat(
-          user_input_audio_format ?? "pcm_16000"
-        );
-        const outputFormat = parseFormat(agent_output_audio_format);
-
-        resolve(
-          new Connection(socket, conversation_id, inputFormat, outputFormat)
-        );
-      })
     }).catch((err) => {
       socket.disconnect();
       throw err;
@@ -142,12 +127,13 @@ export class Connection {
   private disconnectionDetails: DisconnectionDetails | null = null;
   private onDisconnectCallback: OnDisconnectCallback | null = null;
   private onMessageCallback: OnMessageCallback | null = null;
+  private onFormatsCallback: ((formats: { inputFormat: FormatConfig, outputFormat: FormatConfig }) => void) | null = null;
+  public inputFormat: FormatConfig | null = null;
+  public outputFormat: FormatConfig | null = null;
 
   private constructor(
     public readonly socket: Socket,
     public readonly conversationId: string,
-    public readonly inputFormat: FormatConfig,
-    public readonly outputFormat: FormatConfig
   ) {
     this.socket.on("error", (error: any) => {
       setTimeout(() => {
@@ -159,6 +145,13 @@ export class Connection {
         });
       }, 0);
     });
+
+    this.socket.once("voice_conversation_metadata", (data: ConfigEvent) => {
+
+      this.inputFormat = parseFormat(data.conversation_initiation_metadata_event.user_input_audio_format);
+      this.outputFormat = parseFormat(data.conversation_initiation_metadata_event.agent_output_audio_format);
+      this.onFormatsCallback?.({ inputFormat: this.inputFormat, outputFormat: this.outputFormat });
+    })
 
     this.socket.on("disconnect", (reason: string) => {
       const event = {
@@ -178,9 +171,6 @@ export class Connection {
 
     this.socket.on("message", (data: any) => {
       try {
-        // if (!isValidSocketEvent(data)) {
-        //   return;
-        // }
 
         if (this.onMessageCallback) {
           this.onMessageCallback(data);
@@ -267,6 +257,13 @@ export class Connection {
     this.onDisconnectCallback = callback;
     if (this.disconnectionDetails) {
       callback(this.disconnectionDetails);
+    }
+  }
+
+  public onFormats(callback: OnFormatsCallback) {
+    this.onFormatsCallback = callback;
+    if (this.inputFormat && this.outputFormat) {
+      callback({ inputFormat: this.inputFormat, outputFormat: this.outputFormat });
     }
   }
 
