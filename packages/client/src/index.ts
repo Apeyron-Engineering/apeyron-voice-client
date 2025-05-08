@@ -544,6 +544,7 @@ export class Conversation {
       await this.output.close();
       this.output = null;
     }
+    this.connection.socket.emit("interrupt");
     this.updateStatus("connected");
   }
 }
