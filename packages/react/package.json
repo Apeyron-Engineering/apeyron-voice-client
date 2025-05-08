@@ -39,8 +39,9 @@
     "react": ">=16.8.0"
   },
   "devDependencies": {
-    "@types/react": "^18.3.3",
+    "@swc/core": "^1.11.24",
     "@types/bun": "latest",
+    "@types/react": "^18.3.3",
     "eslint": "^9.8.0"
   }
 }
