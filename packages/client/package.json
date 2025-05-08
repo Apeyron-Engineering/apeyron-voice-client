@@ -1,6 +1,6 @@
 {
   "name": "@apeyron-engineering/voice-client",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "type": "module",
   "description": "Apeyron Voice JavaScript Client Library",
   "repository": {

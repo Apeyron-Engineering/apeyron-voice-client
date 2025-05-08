@@ -104,8 +104,7 @@ export class Connection {
 
     return new Promise<Connection>((resolve, reject) => {
       socket.on("connect", () => {
-        console.log("connect");
-
+        socket.emit("conversation_initiation_client_data");
       });
 
       socket.on("connect_error", (err: any) => {
