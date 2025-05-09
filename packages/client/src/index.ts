@@ -43,7 +43,7 @@ export type Callbacks = {
   onDebug: (props: any) => void;
   onDisconnect: OnDisconnectCallback;
   onError: (message: string, context?: any) => void;
-  onMessage: (props: { message: string; source: Role; type?: "final_message" | "token" | "text" | "user_transcript" }) => void;
+  onMessage: (props: { message: string; source: Role; type?: "final_message" | "token" | "text" | "user_transcript" | "agent_response" }) => void;
   onAudio: (base64Audio: string) => void;
   onModeChange: (prop: { mode: Mode }) => void;
   onStatusChange: (prop: { status: Status }) => void;
@@ -246,6 +246,7 @@ export class Conversation {
       case "agent_response": {
         this.options.onMessage({
           source: "ai",
+          type: "agent_response",
           message: parsedEvent.agent_response_event.agent_response,
         });
         return;
