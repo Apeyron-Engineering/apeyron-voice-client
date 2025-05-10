@@ -11,7 +11,10 @@ import {
   PingData,
   ClientToolCallData,
   ChatData,
-  TokenData
+  TokenData,
+  NotificationData,
+  ImageData,
+  ThoughtData
 } from "./events";
 import { io, Socket } from "socket.io-client";
 
@@ -104,7 +107,6 @@ export class Connection {
 
     return new Promise<Connection>((resolve, reject) => {
       socket.on("connect", () => {
-        console.log("connect");
         resolve(new Connection(socket, socket.id ?? ""));
       });
 
@@ -200,6 +202,21 @@ export class Connection {
       user_transcription_event: data,
     }));
 
+    this.socket.on("image", (data: ImageData) => this.handleIncoming({
+      type: "image",
+      image_event: data,
+    }));
+
+    this.socket.on("notification", (data: NotificationData) => this.handleIncoming({
+      type: "notification",
+      notification_event: data,
+    }));
+
+    this.socket.on("thought", (data: ThoughtData) => this.handleIncoming({
+      type: "thought",
+      thought_event: data,
+    }));
+
     this.socket.on("audio", (data: AgentAudioData) => this.handleIncoming({
       type: "audio",
       audio_event: data
@@ -243,7 +260,6 @@ export class Connection {
 
   public sendMessage(message: OutgoingSocketEvent) {
     const { type, ...data } = message
-    console.log(type, data)
     this.socket.emit(type, data);
   }
 
