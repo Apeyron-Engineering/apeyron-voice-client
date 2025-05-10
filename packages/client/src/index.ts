@@ -7,7 +7,7 @@ import {
   OnDisconnectCallback,
   SessionConfig,
 } from "./utils/connection";
-import { ClientToolCallEvent, IncomingSocketEvent } from "./utils/events";
+import { ClientToolCallEvent, IncomingSocketEvent, ImageData, NotificationData, ThoughtData } from "./utils/events";
 import { isAndroidDevice, isIosDevice } from "./utils/compatibility";
 
 export type { InputConfig } from "./utils/input";
@@ -19,6 +19,7 @@ export type {
 } from "./utils/connection";
 export type Role = "user" | "ai";
 export type Mode = "speaking" | "listening";
+export type MessageType = "final_message" | "token" | "text" | "user_transcript" | "agent_response" | "image" | "notification" | "thought";
 export type Status =
   | "connecting"
   | "connected"
@@ -43,7 +44,7 @@ export type Callbacks = {
   onDebug: (props: any) => void;
   onDisconnect: OnDisconnectCallback;
   onError: (message: string, context?: any) => void;
-  onMessage: (props: { message: string; source: Role; type?: "final_message" | "token" | "text" | "user_transcript" | "agent_response" }) => void;
+  onMessage: (props: { message: string | ImageData | NotificationData | ThoughtData; source: Role; type: MessageType }) => void;
   onAudio: (base64Audio: string) => void;
   onModeChange: (prop: { mode: Mode }) => void;
   onStatusChange: (prop: { status: Status }) => void;
@@ -232,7 +233,6 @@ export class Conversation {
 
   private onMessage = async (parsedEvent: IncomingSocketEvent) => {
 
-    console.log("parsedEvent", parsedEvent);
 
     switch (parsedEvent.type) {
       case "interruption": {
@@ -248,6 +248,33 @@ export class Conversation {
           source: "ai",
           type: "agent_response",
           message: parsedEvent.agent_response_event.agent_response,
+        });
+        return;
+      }
+
+      case "image": {
+        this.options.onMessage({
+          source: "ai",
+          type: "image",
+          message: parsedEvent.image_event,
+        });
+        return;
+      }
+
+      case "notification": {
+        this.options.onMessage({
+          source: "ai",
+          type: "notification",
+          message: parsedEvent.notification_event,
+        });
+        return;
+      }
+
+      case "thought": {
+        this.options.onMessage({
+          source: "ai",
+          type: "thought",
+          message: parsedEvent.thought_event,
         });
         return;
       }
@@ -390,7 +417,6 @@ export class Conversation {
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
     if (maxVolume > 0.001) {
-      console.log("VOCE ALTA!!");
 
       if (this.status === "audio_connected") {
         this.connection.sendMessage({
@@ -398,13 +424,10 @@ export class Conversation {
           type: "user_audio_chunk",
         });
       }
-    } else {
-      console.log("VOCE BASSA!!");
     }
   };
 
   private onOutputWorkletMessage = ({ data }: MessageEvent): void => {
-    console.log("OUTPUT WORKLET MSG", data);
     if (data.type === "process") {
       this.updateMode(data.finished ? "listening" : "speaking");
     }

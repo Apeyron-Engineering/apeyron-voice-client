@@ -1,3 +1,4 @@
+import { S } from "vitest/dist/chunks/config.d.DevWltVl";
 import { Language } from "./connection";
 
 export type UserTranscriptionData = {
@@ -35,6 +36,35 @@ export type AgentResponseEvent = {
   type: "agent_response";
   agent_response_event: AgentResponseData;
 };
+
+export type ImageData = {
+  src: string;
+}
+
+export type ImageEvent = {
+  type: "image";
+  image_event: ImageData;
+};
+
+export type NotificationData = {
+  type: string;
+  text: string;
+}
+
+export type NotificationEvent = {
+  type: "notification";
+  notification_event: NotificationData;
+};
+
+export type ThoughtData = {
+  text: string;
+}
+
+export type ThoughtEvent = {
+  type: "thought";
+  thought_event: ThoughtData;
+};
+
 
 
 export type AgentAudioData = {
@@ -113,7 +143,10 @@ export type IncomingSocketEvent =
   | PingEvent
   | ClientToolCallEvent
   | ChatEvent
-  | TokenEvent;
+  | TokenEvent
+  | ImageEvent
+  | NotificationEvent
+  | ThoughtEvent;
 
 
 export type PongEvent = {

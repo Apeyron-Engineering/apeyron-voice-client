@@ -90,7 +90,6 @@ export function useConversation<T extends HookOptions & ControlledState>(
         } as Options);
 
         conversationRef.current = await lockRef.current;
-        console.log("Sessione creata", conversationRef.current);
         return conversationRef.current.getId();
       } finally {
         lockRef.current = null;
