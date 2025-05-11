@@ -186,7 +186,8 @@ export class Conversation {
     private readonly connection: Connection,
     input: Input | null,
     output: Output | null,
-    public wakeLock: WakeLockSentinel | null
+    public wakeLock: WakeLockSentinel | null,
+    private pendingAudioChunks: string[] = []
   ) {
     this.input = input;
     this.output = output;
@@ -384,10 +385,14 @@ export class Conversation {
 
       case "audio": {
         // if (this.lastInterruptTimestamp <= parsedEvent.audio_event.event_id) {
-        this.options.onAudio(parsedEvent.audio_event.audio_base_64);
-        this.addAudioBase64Chunk(parsedEvent.audio_event.audio_base_64);
-        this.currentEventId = parsedEvent.audio_event.event_id;
-        this.updateMode("speaking");
+        if (this.output) {
+          this.options.onAudio(parsedEvent.audio_event.audio_base_64);
+          this.addAudioBase64Chunk(parsedEvent.audio_event.audio_base_64);
+          this.currentEventId = parsedEvent.audio_event.event_id;
+          this.updateMode("speaking");
+        } else {
+          this.pendingAudioChunks.push(parsedEvent.audio_event.audio_base_64);
+        }
         // }
         return;
       }
@@ -415,24 +420,24 @@ export class Conversation {
     const maxVolume = event.data[1];
     const threshold = 0.0001;
 
-    console.log("maxVolume", maxVolume);
-    console.log("threshold", threshold);
+    // console.log("maxVolume", maxVolume);
+    // console.log("threshold", threshold);
 
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
 
 
-    if (maxVolume > threshold) {
-      if (this.status === "audio_connected") {
-        this.connection.sendMessage({
-          user_audio_chunk: arrayBufferToBase64(rawAudioPcmData.buffer),
-          type: "user_audio_chunk",
-        });
-      }
-    } else {
-      console.log("maxVolume", maxVolume);
-      console.log("VOICE NOT DETECTED");
+    // if (maxVolume > threshold) {
+    if (this.status === "audio_connected") {
+      this.connection.sendMessage({
+        user_audio_chunk: arrayBufferToBase64(rawAudioPcmData.buffer),
+        type: "user_audio_chunk",
+      });
     }
+    // } else {
+    // console.log("maxVolume", maxVolume);
+    // console.log("VOICE NOT DETECTED");
+    // }
   };
 
   private onOutputWorkletMessage = ({ data }: MessageEvent): void => {
@@ -561,9 +566,14 @@ export class Conversation {
 
         this.input.worklet.port.onmessage = this.onInputWorkletMessage;
         this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
-
+        this.pendingAudioChunks.forEach(chunk => {
+          this.options.onAudio(chunk);
+          this.addAudioBase64Chunk(chunk);
+        });
+        this.pendingAudioChunks = [];
       }
     });
+
     this.updateStatus("audio_connected");
 
 
