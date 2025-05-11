@@ -413,17 +413,21 @@ export class Conversation {
   private onInputWorkletMessage = (event: MessageEvent): void => {
     const rawAudioPcmData = event.data[0];
     const maxVolume = event.data[1];
+    const threshold = 0.05;
 
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
-    if (maxVolume > 0.01) {
 
+
+    if (maxVolume > threshold) {
       if (this.status === "audio_connected") {
         this.connection.sendMessage({
           user_audio_chunk: arrayBufferToBase64(rawAudioPcmData.buffer),
           type: "user_audio_chunk",
         });
       }
+    } else {
+      console.log("maxVolume", maxVolume);
     }
   };
 
