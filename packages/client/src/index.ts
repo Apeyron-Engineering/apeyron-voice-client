@@ -413,16 +413,15 @@ export class Conversation {
   private onInputWorkletMessage = (event: MessageEvent): void => {
     const rawAudioPcmData = event.data[0];
     const maxVolume = event.data[1];
-    const threshold = 0.001;
+    const threshold = this.mode === "speaking" ? 0.01 : 0.001;
 
-    // console.log("maxVolume", maxVolume);
-    // console.log("threshold", threshold);
+    console.log("threshold", threshold);
+    console.log(this.mode);
+
 
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
 
-    console.log("maxVolume", maxVolume);
-    console.log("threshold", threshold);
 
     if (maxVolume > threshold) {
       if (this.status === "audio_connected") {
@@ -552,7 +551,7 @@ export class Conversation {
     let preliminaryInputStream: MediaStream | null = null;
     let wakeLock: WakeLockSentinel | null = this.wakeLock ?? null;
     try {
-      if ((this.options as any).useWakeLock ?? true) {
+      if (this.options.useWakeLock ?? true) {
         try {
           wakeLock = await navigator.wakeLock.request("screen");
           this.wakeLock = wakeLock;
@@ -562,7 +561,7 @@ export class Conversation {
 
       preliminaryInputStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const delayConfig = (this.options as any).connectionDelay ?? {
+      const delayConfig = this.options.connectionDelay ?? {
         default: 0,
         android: 3_000,
       };

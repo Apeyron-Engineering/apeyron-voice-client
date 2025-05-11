@@ -21,7 +21,7 @@ export class Input {
     try {
       const options: MediaTrackConstraints = {
         sampleRate: { ideal: sampleRate },
-        echoCancellation: { ideal: true, exact: true },
+        echoCancellation: { ideal: true, },
         noiseSuppression: { ideal: true },
       };
 
@@ -80,7 +80,7 @@ export class Input {
     public readonly analyser: AnalyserNode,
     public readonly worklet: AudioWorkletNode,
     public readonly inputStream: MediaStream
-  ) {}
+  ) { }
 
   public async close() {
     this.inputStream.getTracks().forEach(track => track.stop());

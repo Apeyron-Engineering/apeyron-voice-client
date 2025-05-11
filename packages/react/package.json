@@ -1,6 +1,6 @@
 {
   "name": "@apeyron-engineering/react-voice-client",
-  "version": "2.4.3",
+  "version": "2.4.4",
   "module": "src/index.ts",
   "type": "module",
   "description": "Apeyron Voice React Library",
@@ -31,7 +31,7 @@
     "require": "./dist/index.cjs"
   },
   "dependencies": {
-    "@apeyron-engineering/voice-client": "^1.5.1",
+    "@apeyron-engineering/voice-client": "^1.5.2",
     "tsup": "^8.4.0",
     "typescript": "^5.8.2"
   },
