@@ -22,8 +22,7 @@ export class Input {
       const options: MediaTrackConstraints = {
         sampleRate: { ideal: sampleRate },
         echoCancellation: { ideal: true, exact: true },
-        noiseSuppression: { ideal: true, exact: true },
-        autoGainControl: { ideal: true, exact: true },
+        noiseSuppression: { ideal: true },
       };
 
       if (isIosDevice() && preferHeadphonesForIosDevices) {

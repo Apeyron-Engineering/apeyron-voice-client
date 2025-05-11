@@ -418,7 +418,7 @@ export class Conversation {
   private onInputWorkletMessage = (event: MessageEvent): void => {
     const rawAudioPcmData = event.data[0];
     const maxVolume = event.data[1];
-    const threshold = 0.0001;
+    const threshold = 0.001;
 
     // console.log("maxVolume", maxVolume);
     // console.log("threshold", threshold);
@@ -427,12 +427,13 @@ export class Conversation {
     // then forward audio to websocket
 
 
-    // if (maxVolume > threshold) {
-    if (this.status === "audio_connected") {
-      this.connection.sendMessage({
-        user_audio_chunk: arrayBufferToBase64(rawAudioPcmData.buffer),
-        type: "user_audio_chunk",
-      });
+    if (maxVolume > threshold) {
+      if (this.status === "audio_connected") {
+        this.connection.sendMessage({
+          user_audio_chunk: arrayBufferToBase64(rawAudioPcmData.buffer),
+          type: "user_audio_chunk",
+        });
+      }
     }
     // } else {
     // console.log("maxVolume", maxVolume);
