@@ -187,7 +187,6 @@ export class Conversation {
     input: Input | null,
     output: Output | null,
     public wakeLock: WakeLockSentinel | null,
-    private pendingAudioChunks: string[] = []
   ) {
     this.input = input;
     this.output = output;
@@ -384,16 +383,14 @@ export class Conversation {
       }
 
       case "audio": {
-        // if (this.lastInterruptTimestamp <= parsedEvent.audio_event.event_id) {
-        if (this.output) {
-          this.options.onAudio(parsedEvent.audio_event.audio_base_64);
-          this.addAudioBase64Chunk(parsedEvent.audio_event.audio_base_64);
-          this.currentEventId = parsedEvent.audio_event.event_id;
-          this.updateMode("speaking");
-        } else {
-          this.pendingAudioChunks.push(parsedEvent.audio_event.audio_base_64);
+        if (this.lastInterruptTimestamp <= parsedEvent.audio_event.event_id) {
+          if (this.output) {
+            this.options.onAudio(parsedEvent.audio_event.audio_base_64);
+            this.addAudioBase64Chunk(parsedEvent.audio_event.audio_base_64);
+            this.currentEventId = parsedEvent.audio_event.event_id;
+            this.updateMode("speaking");
+          }
         }
-        // }
         return;
       }
 
@@ -418,7 +415,7 @@ export class Conversation {
   private onInputWorkletMessage = (event: MessageEvent): void => {
     const rawAudioPcmData = event.data[0];
     const maxVolume = event.data[1];
-    const threshold = 0.001;
+    const threshold = 0.00075;
 
     // console.log("maxVolume", maxVolume);
     // console.log("threshold", threshold);
@@ -554,32 +551,70 @@ export class Conversation {
 
 
   public async initializeAudioIOAndEmit() {
-
-    this.connection.socket.emit("voice_conversation_client_data");
-
-
-    this.connection.onFormats(async ({ inputFormat, outputFormat }) => {
-
-
-      if (!this.input || !this.output) {
-        [this.input, this.output] = await Promise.all([
-          Input.create({ ...inputFormat, preferHeadphonesForIosDevices: this.options.preferHeadphonesForIosDevices }),
-          Output.create(outputFormat),
-        ]);
-
-        this.input.worklet.port.onmessage = this.onInputWorkletMessage;
-        this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
-        this.pendingAudioChunks.forEach(chunk => {
-          this.options.onAudio(chunk);
-          this.addAudioBase64Chunk(chunk);
-        });
-        this.pendingAudioChunks = [];
+    let preliminaryInputStream: MediaStream | null = null;
+    let wakeLock: WakeLockSentinel | null = this.wakeLock ?? null;
+    try {
+      if ((this.options as any).useWakeLock ?? true) {
+        try {
+          wakeLock = await navigator.wakeLock.request("screen");
+          this.wakeLock = wakeLock;
+        } catch (e) {
+        }
       }
-    });
 
-    this.updateStatus("audio_connected");
+      preliminaryInputStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+      const delayConfig = (this.options as any).connectionDelay ?? {
+        default: 0,
+        android: 3_000,
+      };
+      let delay = delayConfig.default;
+      if (isAndroidDevice()) {
+        delay = delayConfig.android ?? delay;
+      } else if (isIosDevice()) {
+        delay = delayConfig.ios ?? delay;
+      }
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
 
+      this.connection.socket.emit("voice_conversation_client_data");
+
+      await new Promise<void>((resolve, reject) => {
+        this.connection.onFormats(async ({ inputFormat, outputFormat }) => {
+          try {
+            if (!this.input || !this.output) {
+              [this.input, this.output] = await Promise.all([
+                Input.create({ ...inputFormat, preferHeadphonesForIosDevices: this.options.preferHeadphonesForIosDevices }),
+                Output.create(outputFormat),
+              ]);
+              this.input.worklet.port.onmessage = this.onInputWorkletMessage;
+              this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
+            }
+            preliminaryInputStream?.getTracks().forEach(track => track.stop());
+            preliminaryInputStream = null;
+            this.updateStatus("audio_connected");
+            resolve();
+          } catch (err) {
+            preliminaryInputStream?.getTracks().forEach(track => track.stop());
+            preliminaryInputStream = null;
+            await this.input?.close();
+            await this.output?.close();
+            try { await wakeLock?.release(); this.wakeLock = null; } catch {}
+            this.updateStatus("disconnected");
+            reject(err);
+          }
+        });
+      });
+    } catch (error) {
+      preliminaryInputStream?.getTracks().forEach(track => track.stop());
+      preliminaryInputStream = null;
+      await this.input?.close();
+      await this.output?.close();
+      try { await wakeLock?.release(); this.wakeLock = null; } catch {}
+      this.updateStatus("disconnected");
+      throw error;
+    }
   }
 
   public async disconnectAudioIO() {

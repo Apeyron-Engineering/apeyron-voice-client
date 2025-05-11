@@ -21,7 +21,7 @@ export class Input {
     try {
       const options: MediaTrackConstraints = {
         sampleRate: { ideal: sampleRate },
-        echoCancellation: { ideal: true, exact: true },
+        echoCancellation: { ideal: true },
         noiseSuppression: { ideal: true },
       };
 
