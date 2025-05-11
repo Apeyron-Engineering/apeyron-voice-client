@@ -426,6 +426,8 @@ export class Conversation {
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
 
+    console.log("maxVolume", maxVolume);
+    console.log("threshold", threshold);
 
     if (maxVolume > threshold) {
       if (this.status === "audio_connected") {
