@@ -416,6 +416,7 @@ export class Conversation {
     const threshold = this.mode === "speaking" ? 0.002 : 0.001;
 
     console.log("threshold", threshold);
+    console.log("maxVolume", maxVolume);
     console.log(this.mode);
 
 
