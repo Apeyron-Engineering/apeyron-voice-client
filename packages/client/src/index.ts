@@ -416,7 +416,7 @@ export class Conversation {
 
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
-    if (maxVolume > 0.001) {
+    if (maxVolume > 0.01) {
 
       if (this.status === "audio_connected") {
         this.connection.sendMessage({
