@@ -413,7 +413,10 @@ export class Conversation {
   private onInputWorkletMessage = (event: MessageEvent): void => {
     const rawAudioPcmData = event.data[0];
     const maxVolume = event.data[1];
-    const threshold = 0.0075;
+    const threshold = 0.0015;
+
+    console.log("maxVolume", maxVolume);
+    console.log("threshold", threshold);
 
     // check if the sound was loud enough, so we don't send unnecessary chunks
     // then forward audio to websocket
@@ -428,6 +431,7 @@ export class Conversation {
       }
     } else {
       console.log("maxVolume", maxVolume);
+      console.log("VOICE NOT DETECTED");
     }
   };
 
