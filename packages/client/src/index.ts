@@ -383,13 +383,11 @@ export class Conversation {
       }
 
       case "audio": {
-        if (this.lastInterruptTimestamp <= parsedEvent.audio_event.event_id) {
-          if (this.output) {
-            this.options.onAudio(parsedEvent.audio_event.audio_base_64);
-            this.addAudioBase64Chunk(parsedEvent.audio_event.audio_base_64);
-            this.currentEventId = parsedEvent.audio_event.event_id;
-            this.updateMode("speaking");
-          }
+        if (this.output) {
+          this.options.onAudio(parsedEvent.audio_event.audio_base_64);
+          this.addAudioBase64Chunk(parsedEvent.audio_event.audio_base_64);
+          this.currentEventId = parsedEvent.audio_event.event_id;
+          this.updateMode("speaking");
         }
         return;
       }
@@ -600,7 +598,7 @@ export class Conversation {
             preliminaryInputStream = null;
             await this.input?.close();
             await this.output?.close();
-            try { await wakeLock?.release(); this.wakeLock = null; } catch {}
+            try { await wakeLock?.release(); this.wakeLock = null; } catch { }
             this.updateStatus("disconnected");
             reject(err);
           }
@@ -611,26 +609,36 @@ export class Conversation {
       preliminaryInputStream = null;
       await this.input?.close();
       await this.output?.close();
-      try { await wakeLock?.release(); this.wakeLock = null; } catch {}
+      try { await wakeLock?.release(); this.wakeLock = null; } catch { }
       this.updateStatus("disconnected");
       throw error;
     }
   }
 
   public async disconnectAudioIO() {
-    if (this.input) {
-      this.input.worklet.port.onmessage = null;
-
-      await this.input.close();
-      this.input = null;
+    try {
+      if (this.input) {
+        this.input.worklet.port.onmessage = null;
+        await this.input.close();
+        this.input = null;
+      }
+      if (this.output) {
+        this.output.worklet.port.onmessage = null;
+        await this.output.close();
+        this.output = null;
+      }
+      if (this.wakeLock) {
+        try {
+          await this.wakeLock.release();
+        } catch { }
+        this.wakeLock = null;
+      }
+      this.connection.socket.emit("interrupt");
+      this.updateStatus("connected");
+    } catch (error) {
+      this.onError("Errore durante la disconnessione audio", error);
+      this.updateStatus("connected");
     }
-    if (this.output) {
-      this.output.worklet.port.onmessage = null;
-      await this.output.close();
-      this.output = null;
-    }
-    this.connection.socket.emit("interrupt");
-    this.updateStatus("connected");
   }
 }
 
