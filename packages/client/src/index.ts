@@ -413,7 +413,7 @@ export class Conversation {
   private onInputWorkletMessage = (event: MessageEvent): void => {
     const rawAudioPcmData = event.data[0];
     const maxVolume = event.data[1];
-    const threshold = this.mode === "speaking" ? 0.01 : 0.001;
+    const threshold = this.mode === "speaking" ? 0.005 : 0.001;
 
     console.log("threshold", threshold);
     console.log(this.mode);
