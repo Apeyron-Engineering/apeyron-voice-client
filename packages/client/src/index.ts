@@ -413,7 +413,7 @@ export class Conversation {
   private onInputWorkletMessage = (event: MessageEvent): void => {
     const rawAudioPcmData = event.data[0];
     const maxVolume = event.data[1];
-    const threshold = 0.00025;
+    const threshold = 0.00001;
 
     console.log("maxVolume", maxVolume);
     console.log("threshold", threshold);
