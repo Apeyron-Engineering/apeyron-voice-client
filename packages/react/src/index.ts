@@ -7,7 +7,6 @@ import {
   Options,
   Status,
   ClientToolsConfig,
-  InputConfig,
 } from "@apeyron-engineering/voice-client";
 
 export type {
@@ -20,7 +19,7 @@ export type {
 } from "@apeyron-engineering/voice-client";
 
 export type HookOptions = Partial<
-  SessionConfig & HookCallbacks & ClientToolsConfig & InputConfig
+  SessionConfig & HookCallbacks & ClientToolsConfig
 >;
 export type ControlledState = {
   micMuted?: boolean;
@@ -46,11 +45,6 @@ export function useConversation<T extends HookOptions & ControlledState>(
   const [status, setStatus] = useState<Status>("disconnected");
   const [mode, setMode] = useState<Mode>("listening");
 
-  useEffect(() => {
-    if (micMuted !== undefined) {
-      conversationRef?.current?.setMicMuted(micMuted);
-    }
-  }, [micMuted]);
 
   useEffect(() => {
     if (volume !== undefined) {
@@ -112,14 +106,8 @@ export function useConversation<T extends HookOptions & ControlledState>(
     setVolume: ({ volume }: { volume: number }) => {
       conversationRef.current?.setVolume({ volume });
     },
-    getInputByteFrequencyData: () => {
-      return conversationRef.current?.getInputByteFrequencyData();
-    },
     getOutputByteFrequencyData: () => {
       return conversationRef.current?.getOutputByteFrequencyData();
-    },
-    getInputVolume: () => {
-      return conversationRef.current?.getInputVolume() ?? 0;
     },
     sendChatMessage: (message: string) => {
       conversationRef.current?.sendChatMessage(message);
