@@ -1,5 +1,5 @@
-import { arrayBufferToBase64, base64ToArrayBuffer } from "./utils/audio";
-import { Input, InputConfig } from "./utils/input";
+import { base64ToArrayBuffer, float32ArrayToInt16Base64 } from "./utils/audio";
+import { Input } from "./utils/input";
 import { Output } from "./utils/output";
 import {
   Connection,
@@ -8,9 +8,7 @@ import {
   SessionConfig,
 } from "./utils/connection";
 import { ClientToolCallEvent, IncomingSocketEvent, ImageData, NotificationData, ThoughtData } from "./utils/events";
-import { isAndroidDevice, isIosDevice } from "./utils/compatibility";
 
-export type { InputConfig } from "./utils/input";
 export type { IncomingSocketEvent } from "./utils/events";
 export type {
   SessionConfig,
@@ -28,8 +26,7 @@ export type Status =
   | "disconnected";
 export type Options = SessionConfig &
   Callbacks &
-  ClientToolsConfig &
-  InputConfig;
+  ClientToolsConfig;
 export type ClientToolsConfig = {
   clientTools: Record<
     string,
@@ -66,89 +63,11 @@ const defaultCallbacks: Callbacks = {
 };
 
 export class Conversation {
-  // public static async startSession(
-  //   options: SessionConfig &
-  //     Partial<Callbacks> &
-  //     Partial<ClientToolsConfig> &
-  //     Partial<InputConfig>
-  // ): Promise<Conversation> {
-  //   const fullOptions: Options = {
-  //     ...defaultClientTools,
-  //     ...defaultCallbacks,
-  //     ...options,
-  //   };
-
-  //   fullOptions.onStatusChange({ status: "connecting" });
-
-  //   let input: Input | null = null;
-  //   let connection: Connection | null = null;
-  //   let output: Output | null = null;
-  //   let preliminaryInputStream: MediaStream | null = null;
-
-  //   let wakeLock: WakeLockSentinel | null = null;
-  //   if (options.useWakeLock ?? true) {
-  //     try {
-  //       wakeLock = await navigator.wakeLock.request("screen");
-  //     } catch (e) {
-  //       // Wake Lock is not required for the conversation to work
-  //     }
-  //   }
-
-  //   try {
-  //     // some browsers won't allow calling getSupportedConstraints or enumerateDevices
-  //     // before getting approval for microphone access
-  //     preliminaryInputStream = await navigator.mediaDevices.getUserMedia({
-  //       audio: true,
-  //     });
-
-  //     const delayConfig = options.connectionDelay ?? {
-  //       default: 0,
-  //       // Give the Android AudioManager enough time to switch to the correct audio mode
-  //       android: 3_000,
-  //     };
-  //     let delay = delayConfig.default;
-  //     if (isAndroidDevice()) {
-  //       delay = delayConfig.android ?? delay;
-  //     } else if (isIosDevice()) {
-  //       delay = delayConfig.ios ?? delay;
-  //     }
-
-  //     if (delay > 0) {
-  //       await new Promise((resolve) => setTimeout(resolve, delay));
-  //     }
-
-  //     connection = await Connection.create(options);
-  //     [input, output] = await Promise.all([
-  //       Input.create({
-  //         ...connection.inputFormat,
-  //         preferHeadphonesForIosDevices: options.preferHeadphonesForIosDevices,
-  //       }),
-  //       Output.create(connection.outputFormat),
-  //     ]);
-
-  //     preliminaryInputStream?.getTracks().forEach((track) => track.stop());
-  //     preliminaryInputStream = null;
-
-  //     return new Conversation(fullOptions, connection, input, output, wakeLock);
-  //   } catch (error) {
-  //     fullOptions.onStatusChange({ status: "disconnected" });
-  //     preliminaryInputStream?.getTracks().forEach((track) => track.stop());
-  //     connection?.close();
-  //     await input?.close();
-  //     await output?.close();
-  //     try {
-  //       await wakeLock?.release();
-  //       wakeLock = null;
-  //     } catch (e) { }
-  //     throw error;
-  //   }
-  // }
 
   public static async startSession(
     options: SessionConfig &
       Partial<Callbacks> &
-      Partial<ClientToolsConfig> &
-      Partial<InputConfig>
+      Partial<ClientToolsConfig>
   ): Promise<Conversation> {
     const fullOptions: Options = {
       ...defaultClientTools,
@@ -162,7 +81,8 @@ export class Conversation {
 
     try {
       connection = await Connection.create(options);
-      return new Conversation(fullOptions, connection, null, null, null);
+      const input = await Input.create();
+      return new Conversation(fullOptions, connection, input, null);
     } catch (error) {
       fullOptions.onStatusChange({ status: "disconnected" });
       connection?.close();
@@ -170,32 +90,29 @@ export class Conversation {
     }
   }
 
-  private lastInterruptTimestamp: number = 0;
   private mode: Mode = "listening";
   private status: Status = "connecting";
-  private inputFrequencyData?: Uint8Array;
   private outputFrequencyData?: Uint8Array;
   private volume: number = 1;
-  private currentEventId: number = 1;
-  private canSendFeedback: boolean = false;
-  private input: Input | null;
+  private input: Input;
   private output: Output | null;
 
   private constructor(
     private readonly options: Options,
     private readonly connection: Connection,
-    input: Input | null,
+    input: Input,
     output: Output | null,
-    public wakeLock: WakeLockSentinel | null,
   ) {
     this.input = input;
     this.output = output;
     this.options.onConnect({ conversationId: connection.conversationId });
     this.connection.onDisconnect(this.endSessionWithDetails);
     this.connection.onMessage(this.onMessage);
-    if (this.input) this.input.worklet.port.onmessage = this.onInputWorkletMessage;
     if (this.output) this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
     this.updateStatus("connected");
+
+    this.input.setOnChunk(this.onInputWorkletMessage);
+    this.input.setOnSpeechEnd(this.onSpeechEnd);
   }
 
   public endSession = () => this.endSessionWithDetails({ reason: "user" });
@@ -204,13 +121,9 @@ export class Conversation {
     if (this.status !== "connected" && this.status !== "connecting") return;
     this.updateStatus("disconnecting");
 
-    try {
-      await this.wakeLock?.release();
-      this.wakeLock = null;
-    } catch (e) { }
 
     this.connection.close();
-    await this.input?.close();
+    this.input?.close();
     await this.output?.close();
 
     this.updateStatus("disconnected");
@@ -233,12 +146,8 @@ export class Conversation {
 
   private onMessage = async (parsedEvent: IncomingSocketEvent) => {
 
-
     switch (parsedEvent.type) {
       case "interruption": {
-        if (parsedEvent.interruption_event) {
-          this.lastInterruptTimestamp = parsedEvent.interruption_event.event_id;
-        }
         this.fadeOutAudio();
         return;
       }
@@ -386,7 +295,6 @@ export class Conversation {
         if (this.output) {
           this.options.onAudio(parsedEvent.audio_event.audio_base_64);
           this.addAudioBase64Chunk(parsedEvent.audio_event.audio_base_64);
-          this.currentEventId = parsedEvent.audio_event.event_id;
           this.updateMode("speaking");
         }
         return;
@@ -410,33 +318,21 @@ export class Conversation {
     }
   };
 
-  private onInputWorkletMessage = (event: MessageEvent): void => {
-    const rawAudioPcmData = event.data[0];
-    const maxVolume = event.data[1];
-    const threshold = this.mode === "speaking" ? 0.002 : 0.001;
+  private onInputWorkletMessage = (frame: Float32Array): void => {
 
-    console.log("threshold", threshold);
-    console.log("maxVolume", maxVolume);
-    console.log(this.mode);
-
-
-    // check if the sound was loud enough, so we don't send unnecessary chunks
-    // then forward audio to websocket
-
-
-    if (maxVolume > threshold) {
-      if (this.status === "audio_connected") {
-        this.connection.sendMessage({
-          user_audio_chunk: arrayBufferToBase64(rawAudioPcmData.buffer),
-          type: "user_audio_chunk",
-        });
-      }
+    if (this.status === "audio_connected") {
+      this.connection.sendMessage({
+        user_audio_chunk: float32ArrayToInt16Base64(frame),
+        type: "user_audio_chunk",
+      });
     }
-    // } else {
-    // console.log("maxVolume", maxVolume);
-    // console.log("VOICE NOT DETECTED");
-    // }
   };
+
+  private onSpeechEnd = () => {
+    this.connection.sendMessage({
+      type: "user_audio_commit",
+    });
+  }
 
   private onOutputWorkletMessage = ({ data }: MessageEvent): void => {
     if (data.type === "process") {
@@ -502,9 +398,6 @@ export class Conversation {
     this.volume = volume;
   };
 
-  public setMicMuted = (isMuted: boolean) => {
-    this.input?.setMuted(isMuted);
-  };
 
   public sendChatMessage = (message: string) => {
     this.connection.sendMessage({
@@ -512,14 +405,14 @@ export class Conversation {
       text: message,
     });
   }
-  public getInputByteFrequencyData = () => {
-    if (!this.input) return undefined;
-    this.inputFrequencyData ??= new Uint8Array(
-      this.input.analyser.frequencyBinCount
-    );
-    this.input.analyser.getByteFrequencyData(this.inputFrequencyData);
-    return this.inputFrequencyData;
-  };
+  // public getInputByteFrequencyData = () => {
+  //   if (!this.input) return undefined;
+  //   this.inputFrequencyData ??= new Uint8Array(
+  //     this.input.analyser.frequencyBinCount
+  //   );
+  //   this.input.analyser.getByteFrequencyData(this.inputFrequencyData);
+  //   return this.inputFrequencyData;
+  // };
 
   public getOutputByteFrequencyData = () => {
     if (!this.output) return undefined;
@@ -530,10 +423,10 @@ export class Conversation {
     return this.outputFrequencyData;
   };
 
-  public getInputVolume = () => {
-    const freq = this.getInputByteFrequencyData();
-    return freq ? this.calculateVolume(freq) : 0;
-  };
+  // public getInputVolume = () => {
+  //   const freq = this.getInputByteFrequencyData();
+  //   return freq ? this.calculateVolume(freq) : 0;
+  // };
 
   public getOutputVolume = () => {
     const freq = this.getOutputByteFrequencyData();
@@ -549,67 +442,33 @@ export class Conversation {
 
 
   public async initializeAudioIOAndEmit() {
-    let preliminaryInputStream: MediaStream | null = null;
-    let wakeLock: WakeLockSentinel | null = this.wakeLock ?? null;
     try {
-      if (this.options.useWakeLock ?? true) {
-        try {
-          wakeLock = await navigator.wakeLock.request("screen");
-          this.wakeLock = wakeLock;
-        } catch (e) {
-        }
-      }
-
-      preliminaryInputStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      const delayConfig = this.options.connectionDelay ?? {
-        default: 0,
-        android: 3_000,
-      };
-      let delay = delayConfig.default;
-      if (isAndroidDevice()) {
-        delay = delayConfig.android ?? delay;
-      } else if (isIosDevice()) {
-        delay = delayConfig.ios ?? delay;
-      }
-      if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-
       this.connection.socket.emit("voice_conversation_client_data");
 
       await new Promise<void>((resolve, reject) => {
         this.connection.onFormats(async ({ inputFormat, outputFormat }) => {
           try {
-            if (!this.input || !this.output) {
-              [this.input, this.output] = await Promise.all([
-                Input.create({ ...inputFormat, preferHeadphonesForIosDevices: this.options.preferHeadphonesForIosDevices }),
-                Output.create(outputFormat),
-              ]);
-              this.input.worklet.port.onmessage = this.onInputWorkletMessage;
+            if (!this.output) {
+              this.output = await Output.create(outputFormat);
               this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
             }
-            preliminaryInputStream?.getTracks().forEach(track => track.stop());
-            preliminaryInputStream = null;
+            if (this.input) {
+              this.input.start();
+            } else {
+              // Technically we don't need to create it because it's created in the constructor
+              this.input = await Input.create();
+            }
             this.updateStatus("audio_connected");
             resolve();
           } catch (err) {
-            preliminaryInputStream?.getTracks().forEach(track => track.stop());
-            preliminaryInputStream = null;
-            await this.input?.close();
-            await this.output?.close();
-            try { await wakeLock?.release(); this.wakeLock = null; } catch { }
+            this.output?.close();
             this.updateStatus("disconnected");
             reject(err);
           }
         });
       });
     } catch (error) {
-      preliminaryInputStream?.getTracks().forEach(track => track.stop());
-      preliminaryInputStream = null;
-      await this.input?.close();
       await this.output?.close();
-      try { await wakeLock?.release(); this.wakeLock = null; } catch { }
       this.updateStatus("disconnected");
       throw error;
     }
@@ -618,20 +477,12 @@ export class Conversation {
   public async disconnectAudioIO() {
     try {
       if (this.input) {
-        this.input.worklet.port.onmessage = null;
-        await this.input.close();
-        this.input = null;
+        this.input.pause();
       }
       if (this.output) {
         this.output.worklet.port.onmessage = null;
         await this.output.close();
         this.output = null;
-      }
-      if (this.wakeLock) {
-        try {
-          await this.wakeLock.release();
-        } catch { }
-        this.wakeLock = null;
       }
       this.connection.socket.emit("interrupt");
       this.updateStatus("connected");

@@ -1,6 +1,6 @@
 {
   "name": "@apeyron-engineering/voice-client",
-  "version": "1.5.7",
+  "version": "1.6.0",
   "type": "module",
   "description": "Apeyron Voice JavaScript Client Library",
   "repository": {
@@ -30,6 +30,7 @@
   "keywords": [],
   "license": "MIT",
   "dependencies": {
+    "@ricky0123/vad-web": "^0.0.24",
     "socket.io-client": "^4.8.1",
     "tsup": "^8.4.0",
     "typescript": "^5.8.2"

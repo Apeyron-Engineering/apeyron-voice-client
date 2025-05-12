@@ -1,93 +1,63 @@
-import { rawAudioProcessor } from "./rawAudioProcessor";
-import { FormatConfig } from "./connection";
-import { isIosDevice } from "./compatibility";
+import { MicVAD } from "@ricky0123/vad-web";
+import { SpeechProbabilities } from "@ricky0123/vad-web/dist/models";
 
-export type InputConfig = {
-  preferHeadphonesForIosDevices?: boolean;
-};
 
-const LIBSAMPLERATE_JS =
-  "https://cdn.jsdelivr.net/npm/@alexanderolsen/libsamplerate-js@2.1.2/dist/libsamplerate.worklet.js";
 
 export class Input {
-  public static async create({
-    sampleRate,
-    format,
-    preferHeadphonesForIosDevices,
-  }: FormatConfig & InputConfig): Promise<Input> {
-    let context: AudioContext | null = null;
-    let inputStream: MediaStream | null = null;
 
-    try {
-      const options: MediaTrackConstraints = {
-        sampleRate: { ideal: sampleRate },
-        echoCancellation: { ideal: true, },
-        noiseSuppression: { ideal: true },
-      };
+  private static onChunk: (chunk: Float32Array) => void;
+  private static onSpeechEnd: () => void;
 
-      if (isIosDevice() && preferHeadphonesForIosDevices) {
-        const availableDevices =
-          await window.navigator.mediaDevices.enumerateDevices();
-        const idealDevice = availableDevices.find(
-          d =>
-            // cautious to include "bluetooth" in the search
-            // as might trigger bluetooth speakers
-            d.kind === "audioinput" &&
-            ["airpod", "headphone", "earphone"].find(keyword =>
-              d.label.toLowerCase().includes(keyword)
-            )
-        );
-        if (idealDevice) {
-          options.deviceId = { ideal: idealDevice.deviceId };
+  public static async create(): Promise<Input> {
+
+    const micVAD = await MicVAD.new(
+      {
+        onSpeechEnd: () => {
+          Input.onSpeechEnd();
+        },
+        onFrameProcessed: (probabilities: SpeechProbabilities, frame: Float32Array) => {
+          if (probabilities.isSpeech > 0.7) {
+            Input.onChunk(frame);
+          }
         }
       }
 
-      const supportsSampleRateConstraint =
-        navigator.mediaDevices.getSupportedConstraints().sampleRate;
+    )
 
-      context = new window.AudioContext(
-        supportsSampleRateConstraint ? { sampleRate } : {}
-      );
-      const analyser = context.createAnalyser();
-      if (!supportsSampleRateConstraint) {
-        await context.audioWorklet.addModule(LIBSAMPLERATE_JS);
-      }
-      await context.audioWorklet.addModule(rawAudioProcessor);
 
-      inputStream = await navigator.mediaDevices.getUserMedia({
-        audio: options,
-      });
 
-      const source = context.createMediaStreamSource(inputStream);
-      const worklet = new AudioWorkletNode(context, "raw-audio-processor");
-      worklet.port.postMessage({ type: "setFormat", format, sampleRate });
-
-      source.connect(analyser);
-      analyser.connect(worklet);
-
-      await context.resume();
-
-      return new Input(context, analyser, worklet, inputStream);
+    try {
+      return new Input(micVAD);
     } catch (error) {
-      inputStream?.getTracks().forEach(track => track.stop());
-      context?.close();
       throw error;
     }
   }
 
-  private constructor(
-    public readonly context: AudioContext,
-    public readonly analyser: AnalyserNode,
-    public readonly worklet: AudioWorkletNode,
-    public readonly inputStream: MediaStream
-  ) { }
+  private readonly micVAD: MicVAD;
 
-  public async close() {
-    this.inputStream.getTracks().forEach(track => track.stop());
-    await this.context.close();
+  private constructor(
+    micVAD: MicVAD
+  ) {
+    this.micVAD = micVAD;
   }
 
-  public setMuted(isMuted: boolean) {
-    this.worklet.port.postMessage({ type: "setMuted", isMuted });
+  public close() {
+    this.micVAD.destroy();
+  }
+
+  public start() {
+    this.micVAD.start();
+  }
+
+  public pause() {
+    this.micVAD.pause();
+  }
+
+  public setOnChunk(callback: (chunk: Float32Array) => void) {
+    Input.onChunk = callback;
+  }
+
+  public setOnSpeechEnd(callback: () => void) {
+    Input.onSpeechEnd = callback;
   }
 }

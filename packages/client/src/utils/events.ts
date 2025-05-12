@@ -1,4 +1,3 @@
-import { S } from "vitest/dist/chunks/config.d.DevWltVl";
 import { Language } from "./connection";
 
 export type UserTranscriptionData = {
@@ -157,6 +156,9 @@ export type UserAudioEvent = {
   type: "user_audio";
   user_audio_chunk: string;
 };
+export type UserAudioCommitEvent = {
+  type: "user_audio_commit";
+};
 export type ClientToolResultEvent = {
   type: "client_tool_result";
   tool_call_id: string;
@@ -197,6 +199,7 @@ export type UserAudioChunkEvent = {
 export type OutgoingSocketEvent =
   | PongEvent
   | UserAudioEvent
+  | UserAudioCommitEvent
   | InitiationClientDataEvent
   | ClientToolResultEvent
   | ContextualUpdateEvent
