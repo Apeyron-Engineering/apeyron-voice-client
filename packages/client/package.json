@@ -1,6 +1,6 @@
 {
   "name": "@apeyron-engineering/voice-client",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "type": "module",
   "description": "Apeyron Voice JavaScript Client Library",
   "repository": {
@@ -23,7 +23,7 @@
     "require": "./dist/index.cjs"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && bun run copy-assets",
     "build-notypes": "bun build ./src/index.ts --outdir ./dist",
     "prepublishOnly": "bun run build"
   },
@@ -31,9 +31,13 @@
   "license": "MIT",
   "dependencies": {
     "@ricky0123/vad-web": "^0.0.24",
+    "@types/fs-extra": "^11.0.4",
+    "fs-extra": "^11.3.0",
+    "glob": "^11.0.2",
     "socket.io-client": "^4.8.1",
     "tsup": "^8.4.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vite-plugin-static-copy": "^3.0.0"
   },
   "devDependencies": {
     "@swc/core": "^1.11.18",

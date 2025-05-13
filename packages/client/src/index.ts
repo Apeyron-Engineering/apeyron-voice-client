@@ -95,7 +95,7 @@ export class Conversation {
   private outputFrequencyData?: Uint8Array;
   private volume: number = 1;
   private input: Input;
-  private output: Output | null;
+  private output: Output | null;  //  Output Format Got at runtime from server
 
   private constructor(
     private readonly options: Options,
@@ -111,8 +111,11 @@ export class Conversation {
     if (this.output) this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
     this.updateStatus("connected");
 
-    this.input.setOnChunk(this.onInputWorkletMessage);
-    this.input.setOnSpeechEnd(this.onSpeechEnd);
+    this.input.onSpeechChunk = this.onInputWorkletMessage;
+    this.input.onSpeechEnd = this.onSpeechEnd;
+    this.input.onSpeechStart = () => {
+      console.log('Avvio conversazione!');
+    }
   }
 
   public endSession = () => this.endSessionWithDetails({ reason: "user" });
