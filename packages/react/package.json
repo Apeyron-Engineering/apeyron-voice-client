@@ -1,6 +1,6 @@
 {
   "name": "@apeyron-engineering/react-voice-client",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "module": "src/index.ts",
   "type": "module",
   "description": "Apeyron Voice React Library",
