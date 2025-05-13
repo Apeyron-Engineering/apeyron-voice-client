@@ -8,8 +8,8 @@ export class Input {
 
     const micVAD = await MicVAD.new(
       {
-        baseAssetPath: '/',
-        onnxWASMBasePath: '/',
+        baseAssetPath: '/assets',
+        onnxWASMBasePath: '/assets',
         model: 'v5'
       }
     );
