@@ -8,8 +8,8 @@ export class Input {
 
     const micVAD = await MicVAD.new(
       {
-        baseAssetPath: '/assets',
-        onnxWASMBasePath: '/assets',
+        baseAssetPath: '/assets/',
+        onnxWASMBasePath: '/assets/',
         model: 'v5'
       }
     );
@@ -33,7 +33,11 @@ export class Input {
     this.micVAD.setOptions({
       onSpeechEnd: this.onSpeechEnd,
       onSpeechStart: this.onSpeechStart,
-      onFrameProcessed: this.onSpeechChunk
+      onFrameProcessed: (probabilities: SpeechProbabilities, frame: Float32Array) => {
+        if (probabilities.isSpeech > 0.72) {
+          this.onSpeechChunk(frame);
+        }
+      }
     })
   }
 
