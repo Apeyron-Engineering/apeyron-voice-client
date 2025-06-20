@@ -112,6 +112,9 @@ export function useConversation<T extends HookOptions & ControlledState>(
     sendChatMessage: (message: string) => {
       conversationRef.current?.sendChatMessage(message);
     },
+    sendFile: (file: File) => {
+      conversationRef.current?.sendFile(file);
+    },
     getOutputVolume: () => {
       return conversationRef.current?.getOutputVolume() ?? 0;
     },

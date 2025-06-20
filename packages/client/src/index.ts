@@ -7,7 +7,7 @@ import {
   OnDisconnectCallback,
   SessionConfig,
 } from "./utils/connection";
-import { ClientToolCallEvent, IncomingSocketEvent, ImageData, NotificationData, ThoughtData } from "./utils/events";
+import { ClientToolCallEvent, IncomingSocketEvent, ImageData, NotificationData, ThoughtData, WebResultData } from "./utils/events";
 
 export type { IncomingSocketEvent } from "./utils/events";
 export type {
@@ -17,7 +17,7 @@ export type {
 } from "./utils/connection";
 export type Role = "user" | "ai";
 export type Mode = "speaking" | "listening";
-export type MessageType = "final_message" | "token" | "text" | "user_transcript" | "agent_response" | "image" | "notification" | "thought";
+export type MessageType = "final_message" | "token" | "text" | "user_transcript" | "agent_response" | "image" | "notification" | "thought" | "web_results";
 export type Status =
   | "connecting"
   | "connected"
@@ -41,7 +41,7 @@ export type Callbacks = {
   onDebug: (props: any) => void;
   onDisconnect: OnDisconnectCallback;
   onError: (message: string, context?: any) => void;
-  onMessage: (props: { message: string | ImageData | NotificationData | ThoughtData; source: Role; type: MessageType }) => void;
+  onMessage: (props: { message: string | ImageData | NotificationData | ThoughtData | WebResultData; source: Role; type: MessageType }) => void;
   onAudio: (base64Audio: string) => void;
   onModeChange: (prop: { mode: Mode }) => void;
   onStatusChange: (prop: { status: Status }) => void;
@@ -111,11 +111,10 @@ export class Conversation {
     if (this.output) this.output.worklet.port.onmessage = this.onOutputWorkletMessage;
     this.updateStatus("connected");
 
-    this.input.onSpeechChunk = this.onInputWorkletMessage;
-    this.input.onSpeechEnd = this.onSpeechEnd;
-    this.input.onSpeechStart = () => {
-      console.log('Avvio conversazione!');
-    }
+    this.input.setOnChunk(this.onInputWorkletMessage);
+    this.input.setOnSpeechEnd(this.onSpeechEnd);
+
+
   }
 
   public endSession = () => this.endSessionWithDetails({ reason: "user" });
@@ -187,6 +186,15 @@ export class Conversation {
           source: "ai",
           type: "thought",
           message: parsedEvent.thought_event,
+        });
+        return;
+      }
+
+      case "web_results": {
+        this.options.onMessage({
+          source: "ai",
+          type: "web_results",
+          message: parsedEvent.web_results_event,
         });
         return;
       }
@@ -408,6 +416,17 @@ export class Conversation {
       text: message,
     });
   }
+
+
+
+  public sendFile = (file: File) => {
+    this.connection.sendMessage({
+      type: "file",
+      file,
+    });
+  }
+
+
   // public getInputByteFrequencyData = () => {
   //   if (!this.input) return undefined;
   //   this.inputFrequencyData ??= new Uint8Array(

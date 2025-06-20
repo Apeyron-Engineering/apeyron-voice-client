@@ -10,6 +10,17 @@ export type UserTranscriptionEvent = {
 };
 
 
+export type WebResultData = {
+  results: {
+    title: string;
+    url: string;
+  }[];
+}
+
+export type WebResultEvent = {
+  type: "web_results";
+  web_results_event: WebResultData;
+};
 export type AgentResponseData = {
   agent_response: string;
 }
@@ -145,7 +156,8 @@ export type IncomingSocketEvent =
   | TokenEvent
   | ImageEvent
   | NotificationEvent
-  | ThoughtEvent;
+  | ThoughtEvent
+  | WebResultEvent;
 
 
 export type PongEvent = {
@@ -169,6 +181,12 @@ export type ChatMessageEvent = {
   type: "chat";
   text: string;
 };
+
+export type FileEvent = {
+  type: "file";
+  file: File;
+}
+
 export type InitiationClientDataEvent = {
   type: "conversation_initiation_client_data";
   conversation_config_override?: {
@@ -204,4 +222,5 @@ export type OutgoingSocketEvent =
   | ClientToolResultEvent
   | ContextualUpdateEvent
   | UserAudioChunkEvent
-  | ChatMessageEvent;
+  | ChatMessageEvent
+  | FileEvent;

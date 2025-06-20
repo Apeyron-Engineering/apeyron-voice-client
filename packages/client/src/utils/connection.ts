@@ -14,7 +14,8 @@ import {
   TokenData,
   NotificationData,
   ImageData,
-  ThoughtData
+  ThoughtData,
+  WebResultData
 } from "./events";
 import { io, Socket } from "socket.io-client";
 
@@ -190,6 +191,11 @@ export class Connection {
     this.socket.on("chat", (data: ChatData) => this.handleIncoming({
       type: "chat",
       chat_event: data,
+    }));
+
+    this.socket.on("web_results", (data: WebResultData) => this.handleIncoming({
+      type: "web_results",
+      web_results_event: data,
     }));
 
     this.socket.on("token", (data: TokenData) => this.handleIncoming({
