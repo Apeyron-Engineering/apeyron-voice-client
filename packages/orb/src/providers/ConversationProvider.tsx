@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext, useContext, useEffect, useCallback } from "react";
 import { useConversation as useRawConversation } from "@apeyron-engineering/react-voice-client";
 import { requestMicrophonePermission, getStartAudio, getPauseAudio } from "../lib/audio";
