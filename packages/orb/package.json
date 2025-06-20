@@ -1,0 +1,48 @@
+{
+  "name": "@apeyron-engineering/orb",
+  "version": "0.1.0",
+  "module": "src/index.ts",
+  "type": "module",
+  "description": "Apeyron Orb",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Apeyron-Engineering/apeyron-voice-client.git",
+    "directory": "packages/orb"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "tsup": "^8.5.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "keywords": [],
+  "author": "Apeyron Engineers",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src/assets"
+  ],
+  "exports": {
+    "import": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "build-notypes": "bun build ./src/index.ts --outdir ./dist",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@apeyron-engineering/react-voice-client": "^2.6.5",
+    "ogl": "^1.0.11",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "webgl": "^0.0.7"
+  }
+}
