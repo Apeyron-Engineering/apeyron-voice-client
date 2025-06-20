@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useCallback } from "react";
 import { useConversation as useRawConversation } from "@apeyron-engineering/react-voice-client";
-import { requestMicrophonePermission, startAudio, pauseAudio } from "../lib/audio";
+import { requestMicrophonePermission, getStartAudio, getPauseAudio } from "../lib/audio";
 
 
 interface ConversationContextValue {
@@ -35,12 +35,12 @@ export function ConversationProvider({ children, authToken, apiUrl }: {children:
       alert("No permission");
       return;
     }
-    startAudio.play();
+    getStartAudio()?.play();
     await conversation.initializeAudioIOAndEmit();
   }, [conversation]);
 
   const stopAudioConversation = useCallback(async () => {
-    pauseAudio.play();
+    getPauseAudio()?.play();
     await conversation.disconnectAudioIO();
   }, [conversation]);
 

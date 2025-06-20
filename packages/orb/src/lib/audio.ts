@@ -1,8 +1,16 @@
-import startAudioUrl from 'https://res.cloudinary.com/dnrxtasxn/video/upload/v1750415852/rt-ready_bn886o.wav';
-import pauseAudioUrl from 'https://res.cloudinary.com/dnrxtasxn/video/upload/v1750415852/rt-pause_g2u8gt.wav';
 
-export const startAudio = new Audio(startAudioUrl);
-export const pauseAudio = new Audio(pauseAudioUrl);
+const startAudioUrl = 'https://res.cloudinary.com/dnrxtasxn/video/upload/v1750415852/rt-ready_bn886o.wav';
+const pauseAudioUrl = 'https://res.cloudinary.com/dnrxtasxn/video/upload/v1750415852/rt-pause_g2u8gt.wav';
+
+function createAudio(url: string): HTMLAudioElement | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return new Audio(url);
+}
+
+export const getStartAudio = () => createAudio(startAudioUrl);
+export const getPauseAudio = () => createAudio(pauseAudioUrl);
 
 export async function requestMicrophonePermission() {
     try {
@@ -12,7 +20,7 @@ export async function requestMicrophonePermission() {
       console.error("Microphone permission denied");
       return false;
     }
-  }
+}
   
 
 
