@@ -1,6 +1,6 @@
 {
   "name": "@apeyron-engineering/orb",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "module": "src/index.ts",
   "type": "module",
   "description": "Apeyron Orb",
