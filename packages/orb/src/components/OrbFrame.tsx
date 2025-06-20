@@ -9,7 +9,7 @@ const positionClasses: Record<string, string> = {
     'top-right': 'top-4 right-2 md:right-8 md:top-8',
 };
 
-const OrbFrame = ({ position = 'bottom-right', className, orbSize = [90, 90], conversation, startAudioConversation, stopAudioConversation }: OrbFrameProps) => {
+const OrbFrame = ({ position = 'bottom-right', className, orbSize = [95, 95], conversation, startAudioConversation, stopAudioConversation }: OrbFrameProps) => {
     return (
         <div
             className={cn(
