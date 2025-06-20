@@ -40,9 +40,12 @@
   },
   "dependencies": {
     "@apeyron-engineering/react-voice-client": "^2.6.5",
+    "@tailwindcss/postcss": "^4.1.10",
     "ogl": "^1.0.11",
+    "postcss": "^8.5.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.10",
     "webgl": "^0.0.7"
   }
 }
