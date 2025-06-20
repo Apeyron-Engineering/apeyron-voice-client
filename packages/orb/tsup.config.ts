@@ -8,12 +8,4 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   outDir: 'dist',
-  // Gestisce gli asset audio
-  loader: {
-    '.wav': 'copy',
-    '.mp3': 'copy',
-    '.ogg': 'copy'
-  },
-  // Copia gli asset nella dist
-  onSuccess: 'cp -r src/assets dist/'
 }) 
